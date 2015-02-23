@@ -1,12 +1,12 @@
 " Vim syntax file
 " Language:    FreeBasic
-" Maintainer:  Mark Manning <markem@sim1.us>
+" Maintainer:  Mark Manning <markem@airmail.net>
 " Updated:     10/22/2006
 "
 " Description:
 "
 "	Based originally on the work done by Allan Kelly <Allan.Kelly@ed.ac.uk>
-"	Updated by Mark Manning <markem@sim1.us>
+"	Updated by Mark Manning <markem@airmail.net>
 "	Applied FreeBasic support to the already excellent support
 "	for standard basic syntax (like QB).
 "
@@ -17,6 +17,40 @@
 "	the maintainer.
 "
 "	Quit when a (custom) syntax file was already loaded (Taken from c.vim)
+"
+"	Updated Feb 2015 by Michael Torrie <torriem@gmail.com>
+"
+"	fixed highlighting for numbers, changed dim, redim, and as to
+"	freebasicArrays so they look better
+"
+"	Fixed comments, added multi-line comments
+"
+"	Fixed preprocessor highlighting (wasn't working at all), mostly
+"	working now, though occasionally colors the next line after a #define.
+"	Added support for include once
+"
+"	Fixed error highlighting a bit (for some reason clustering isn't
+"	working.  
+"
+"	Instead of defaulting to "Identifier" which marks every variable and
+"	symbol, leave those the default text color.  Makes it more consistent
+"	with C, Python, and other syntax highlighting in VIM.
+"
+"	Other things probably still missing and not working.  the ON something 
+"	GOTO something syntax is not highlighted.  Nor is OPEN Cons. Select
+"	Case is not highlighted either.
+"
+"	Update:	Michael Torrie (torriem@gmail.com)	2/20/2015 11:22pm
+"		I've made a number of changes to the file to fix a lot of things
+"		that just weren't working such as preprocessor directives (#ifdef,
+"		#define, etc).  Fixed up comment handling a bit, and added multi-line
+"		comments (/' '/).  Changed a few other classifications too to make
+"		the code highlight more like how code is highlighted in other languages
+"		such as C, Python, etc.  User-defined identifiers are not colored at
+"		all, which makes code a lot more readable.  Numbers also were not being
+"		highlighted at all before; not sure why but I fixed that.  There
+"		are still some broken things I encounter once in a while, but overall
+"		the highlighting is much improved.
 "
 if exists("b:current_syntax")
   finish
@@ -31,7 +65,7 @@ syn case ignore
 "	This list of keywords is taken directly from the FreeBasic
 "	user's guide as presented by the FreeBasic online site.
 "
-syn keyword	freebasicArrays			ERASE LBOUND REDIM PRESERVE UBOUND
+syn keyword	freebasicArrays			ERASE LBOUND REDIM PRESERVE UBOUND DIM AS SHARED
 
 syn keyword	freebasicBitManipulation	BIT BITRESET BITSET HIBYTE HIWORD LOBYTE LOWORD SHL SHR
 
@@ -43,13 +77,12 @@ syn match	freebasicCompilerSwitches	"\<option\s+\(PRIVATE\|STATIC\)\>"
 syn region	freebasicConditional		start="\son\s+" skip=".*" end="gosub"
 syn region	freebasicConditional		start="\son\s+" skip=".*" end="goto"
 syn match	freebasicConditional		"\<select\s+case\>"
-syn match	freebasicConditional		"end\s+if"
-syn keyword	freebasicConditional		if iif then case else elseif with endif
+syn keyword	freebasicConditional		if iif then case else elseif with
 
 syn match	freebasicConsole		"\<open\s+\(CONS\|ERR\|PIPE\|SCRN\)\>"
 syn keyword	freebasicConsole		BEEP CLS CSRLIN LOCATE PRINT POS SPC TAB VIEW WIDTH
 
-syn keyword	freebasicDataTypes		BYTE AS DIM CONST DOUBLE ENUM INTEGER LONG LONGINT SHARED SHORT STRING
+syn keyword	freebasicDataTypes		BYTE CONST DOUBLE ENUM INTEGER LONG LONGINT SHORT STRING
 syn keyword	freebasicDataTypes		SINGLE TYPE UBYTE UINTEGER ULONGINT UNION UNSIGNED USHORT WSTRING ZSTRING
 
 syn keyword	freebasicDateTime		DATE DATEADD DATEDIFF DATEPART DATESERIAL DATEVALUE DAY HOUR MINUTE
@@ -103,9 +136,6 @@ syn keyword	freebasicEnviron		SHELL SYSTEM WINDOWTITLE POINTERS
 
 syn keyword	freebasicLoops			FOR LOOP WHILE WEND DO CONTINUE STEP UNTIL next
 
-syn match	freebasicInclude		"\<#\s*\(inclib\|include\)\>"
-syn match	freebasicInclude		"\<\$\s*include\>"
-
 syn keyword	freebasicPointer		PROCPTR PTR SADD STRPTR VARPTR
 
 syn keyword	freebasicPredefined		__DATE__ __FB_DOS__ __FB_LINUX__ __FB_MAIN__ __FB_MIN_VERSION__
@@ -113,11 +143,18 @@ syn keyword	freebasicPredefined		__FB_SIGNATURE__ __FB_VERSION__ __FB_WIN32__ __
 syn keyword	freebasicPredefined		__FB_VER_MINOR__ __FB_VER_PATCH__ __FILE__ __FUNCTION__
 syn keyword	freebasicPredefined		__LINE__ __TIME__
 
-syn match	freebasicPreProcessor		"\<^#\s*\(define\|undef\)\>"
-syn match	freebasicPreProcessor		"\<^#\s*\(ifdef\|ifndef\|else\|elseif\|endif\|if\)\>"
-syn match	freebasicPreProcessor		"\<#\s*error\>"
-syn match	freebasicPreProcessor		"\<#\s*\(print\|dynamic\|static\)\>"
-syn keyword	freebasicPreProcessor		DEFINED ONCE
+" Preprocessor
+syn keyword	freebasicPreProcIncludeWords		DEFINED ONCE
+syn region	freebasicPreProcIncluded	display contained start=+"+ skip=+\\\\\|\\"+ end=+"+
+syn match	freebasicPreProcInclude	display "^\s*\(%:\|#\)\s*lang\>\s*\"" contains=freebasicPreProcIncluded
+syn match	freebasicPreProcInclude	display "^\s*\(%:\|#\)\s*include\>\s*\"" contains=freebasicPreProcIncluded
+syn match	freebasicPreProcInclude	display "^\s*\(%:\|#\)\s*include\sonce\>\s*\"" contains=freebasicPreProcIncluded
+syn region	freebasicPreProcDefine	start="^\s*\(%:\|#\)\s*\(define\|undef\)\>" skip="\\$" end="$" end="//"me=s-1 contains=freebasicNumber,freebasicComment
+syn region	freebasicPreProcCondit	start="^\s*\(%:\|#\)\s*\(if\|ifdef\|ifndef\|elif\)\>" skip="\\$" end="$" end="//"me=s-1 contains=freebasicComment
+syn match	freebasicPreProcCondit	display "^\s*\(%:\|#\)\s*\(else\|endif\)\>"
+syn region	freebasicOut		start="^\s*\(%:\|#\)\s*if\s\+0\+\>" end=".\@=\|$" contains=freebasicOut2 fold
+syn region	freebasicOut2		contained start="0" end="^\s*\(%:\|#\)\s*\(endif\>\|else\>\|elif\>\)" contains=freebasicSkip
+syn region	freebasicSkip		contained start="^\s*\(%:\|#\)\s*\(if\>\|ifdef\>\|ifndef\>\)" skip="\\$" end="^\s*\(%:\|#\)\s*endif\>" contains=freebasicSkip
 
 syn keyword	freebasicProgramFlow		END EXIT GOSUB GOTO
 syn keyword	freebasicProgramFlow		IS RETURN SCOPE SLEEP
@@ -154,6 +191,8 @@ syn match	freebasicInParen	contained "[{}]"
 syn cluster	freebasicParenGroup	contains=freebasicParenError,freebasicSpecial,freebasicTodo,freebasicUserCont,freebasicUserLabel,freebasicBitField
 "
 "	Integer number, or floating point number without a dot and with "f".
+"	Hex end marking isn't quite right. Requires a space. Not sure how to
+"	make that better
 "
 syn region	freebasicHex		start="&h" end="\W"
 syn region	freebasicHexError	start="&h\x*[g-zG-Z]" end="\W"
@@ -182,14 +221,6 @@ syn match	freebasicOctalError	"\<0\o*[89]"
 syn region	freebasicString		start='"' end='"' contains=freebasicSpecial,freebasicTodo
 syn region	freebasicString		start="'" end="'" contains=freebasicSpecial,freebasicTodo
 "
-"	Comments
-"
-syn match	freebasicSpecial	contained "\\."
-syn region	freebasicComment	start="^rem" end="$" contains=freebasicSpecial,freebasicTodo
-syn region	freebasicComment	start=":\s*rem" end="$" contains=freebasicSpecial,freebasicTodo
-syn region	freebasicComment	start="\s*'" end="$" contains=freebasicSpecial,freebasicTodo
-syn region	freebasicComment	start="^'" end="$" contains=freebasicSpecial,freebasicTodo
-"
 "	Now do the comments and labels
 "
 syn match	freebasicLabel		"^\d"
@@ -205,48 +236,94 @@ syn cluster	freebasicError		contains=freebasicHexError,freebasicOctalError
 "
 syn match	freebasicFilenumber	"#\d\+"
 syn match	freebasicMathOperator	"[\+\-\=\|\*\/\>\<\%\()[\]]" contains=freebasicParen
+
+
+"
+"	Comments
+"
+syn match	freebasicSpecial	contained "\\."
+syn region	freebasicComment	start="^rem" end="$" contains=freebasicSpecial,freebasicTodo
+syn region	freebasicComment	start=":\s*rem" end="$" contains=freebasicSpecial,freebasicTodo
+syn region	freebasicComment	start="\(^\|\s\)rem\s" end="$" contains=freebasicSpecial,freebasicTodo
+syn region	freebasicComment	start="\s*'" end="$" contains=freebasicSpecial,freebasicTodo
+syn region	freebasicComment	start="^'" end="$" contains=freebasicSpecial,freebasicTodo
+
+syn region	freebasicComment	start="^'" end="$" contains=freebasicSpecial,freebasicTodo
+syn region	freebasicComment	start="/'" end="'/" contains=freebasicSpecial,freebasicTodo
+
+
 "
 "	The default methods for highlighting.  Can be overridden later
 "
-hi def link freebasicArrays		StorageClass
-hi def link freebasicBitManipulation	Operator
-hi def link freebasicCompilerSwitches	PreCondit
-hi def link freebasicConsole		Special
-hi def link freebasicDataTypes		Type
-hi def link freebasicDateTime		Type
-hi def link freebasicDebug		Special
-hi def link freebasicErrorHandling	Special
-hi def link freebasicFiles		Special
-hi def link freebasicFunctions		Function
-hi def link freebasicGraphics		Function
-hi def link freebasicHardware		Special
-hi def link freebasicLogical		Conditional
-hi def link freebasicMath		Function
-hi def link freebasicMemory		Function
-hi def link freebasicMisc		Special
-hi def link freebasicModularizing	Special
-hi def link freebasicMultithreading	Special
-hi def link freebasicShell		Special
-hi def link freebasicEnviron		Special
-hi def link freebasicPointer		Special
-hi def link freebasicPredefined		PreProc
-hi def link freebasicPreProcessor	PreProc
-hi def link freebasicProgramFlow	Statement
-hi def link freebasicString		String
-hi def link freebasicTypeCasting	Type
-hi def link freebasicUserInput		Statement
-hi def link freebasicComment		Comment
-hi def link freebasicConditional	Conditional
-hi def link freebasicError		Error
-hi def link freebasicIdentifier		Identifier
-hi def link freebasicInclude		Include
-hi def link freebasicGenericFunction	Function
-hi def link freebasicLabel		Label
-hi def link freebasicLineNumber		Label
-hi def link freebasicMathOperator	Operator
-hi def link freebasicNumber		Number
-hi def link freebasicSpecial		Special
-hi def link freebasicTodo		Todo
+
+" Define the default highlighting.
+" For version 5.7 and earlier: only when not done already
+" For version 5.8 and later: only when an item doesn't have highlighting yet
+if version >= 508 || !exists("did_fbasic_syntax_inits")
+  if version < 508
+    let did_fbasic_syntax_inits = 1
+    command -nargs=+ HiLink hi link <args>
+  else
+    command -nargs=+ HiLink hi def link <args>
+  endif
+
+  HiLink freebasicArrays		Statement
+  HiLink freebasicBitManipulation	Operator
+  HiLink freebasicCompilerSwitches	PreCondit
+  HiLink freebasicConsole		Identifier
+  HiLink freebasicDataTypes		Type
+  HiLink freebasicDateTime		Type
+  HiLink freebasicDebug		Special
+  HiLink freebasicErrorHandling	Special
+  HiLink freebasicFiles		Identifier
+  HiLink freebasicFunctions		Function
+  HiLink freebasicGraphics		Function
+  HiLink freebasicHardware		Identifier
+  HiLink freebasicLogical		Conditional
+  HiLink freebasicLoops 		Statement
+  HiLink freebasicMath		Function
+  HiLink freebasicMemory		Function
+  HiLink freebasicMisc		Special
+  HiLink freebasicModularizing	Special
+  HiLink freebasicMultithreading	Special
+  HiLink freebasicShell		Special
+  HiLink freebasicEnviron		Special
+  HiLink freebasicPointer		Special
+
+  HiLink freebasicPredefined		PreProc
+  HiLink freebasicPreProcIncluded	String
+  HiLink freebasicPreProcCondit	PreProc
+  HiLink freebasicPreProcDefine	PreProc
+
+  HiLink freebasicProgramFlow	Statement
+  HiLink freebasicString		String
+  HiLink freebasicTypeCasting	Type
+  HiLink freebasicUserInput		Statement
+  HiLink freebasicComment		Comment
+  HiLink freebasicOut 	Comment
+  HiLink freebasicOut2 	Comment
+  HiLink freebasicSkip 	Comment
+
+  HiLink freebasicConditional	Conditional
+  HiLink freebasicHexError		Error
+  HiLink freebasicOctalError		Error
+
+  HiLink freebasicPreProcInclude		Include
+  HiLink freebasicLabel		Label
+  HiLink freebasicLineNumber		Label
+  HiLink freebasicMathOperator	Operator
+  HiLink freebasicInteger		Number
+  HiLink freebasicFloat		Number
+  HiLink freebasicHex		Number
+  HiLink freebasicOctal		Number
+  HiLink freebasicSpecial		Special
+  HiLink freebasicTodo		Todo
+
+  delcommand HiLink
+endif
+
+
+
 
 let b:current_syntax = "freebasic"
 
